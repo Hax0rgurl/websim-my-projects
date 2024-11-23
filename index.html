@@ -34,6 +34,22 @@
             margin-top: 10px;
             color: #6c757d;
         }
+        .load-more {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .load-more button {
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #007bff;
+            border: none;
+            color: #ffffff;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .load-more button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -41,43 +57,78 @@
     <div id="project-list" class="project-list">
         <!-- Projects will be loaded here -->
     </div>
+    <div id="load-more-container" class="load-more">
+        <!-- Load More button will be inserted here if needed -->
+    </div>
 
     <script>
         (async () => {
             const user = await window.websim.getUser();
             const projectList = document.getElementById('project-list');
+            const loadMoreContainer = document.getElementById('load-more-container');
 
             if (!user) {
                 projectList.innerHTML = '<p>You need to be logged in to view your projects.</p>';
                 return;
             }
 
-            const response = await fetch('/api/v1/user/projects');
-            const data = await response.json();
+            let endCursor = null;
+            let loading = false;
+            async function loadProjects() {
+                if (loading) return;
+                loading = true;
 
-            const projects = data.projects.data;
+                let url = '/api/v1/user/projects';
+                let params = [];
+                if (endCursor) {
+                    params.push('after=' + encodeURIComponent(endCursor));
+                }
+                params.push('first=10'); // Adjust the number to control how many projects to load per request
+                if (params.length) {
+                    url += '?' + params.join('&');
+                }
 
-            if (projects.length === 0) {
-                projectList.innerHTML = '<p>You have no projects yet. Start creating to see them here!</p>';
-                return;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                const projects = data.projects.data;
+
+                if (projects.length === 0 && !endCursor) {
+                    projectList.innerHTML = '<p>You have no projects yet. Start creating to see them here!</p>';
+                    loadMoreContainer.innerHTML = '';
+                    return;
+                }
+
+                projects.forEach(({ project }) => {
+                    const projectItem = document.createElement('div');
+                    projectItem.className = 'project-item';
+
+                    const projectLink = document.createElement('a');
+                    projectLink.href = 'https://websim.ai/p/' + project.id;
+                    projectLink.textContent = project.title || 'Untitled Project';
+
+                    const description = document.createElement('p');
+                    description.className = 'project-description';
+                    description.textContent = project.description || 'No description provided.';
+
+                    projectItem.appendChild(projectLink);
+                    projectItem.appendChild(description);
+                    projectList.appendChild(projectItem);
+                });
+
+                const hasNextPage = data.projects.meta.has_next_page;
+                endCursor = data.projects.meta.end_cursor;
+                loading = false;
+
+                if (hasNextPage) {
+                    loadMoreContainer.innerHTML = '<button id="load-more-button">Load More</button>';
+                    document.getElementById('load-more-button').addEventListener('click', loadProjects);
+                } else {
+                    loadMoreContainer.innerHTML = '';
+                }
             }
 
-            projects.forEach(({ project }) => {
-                const projectItem = document.createElement('div');
-                projectItem.className = 'project-item';
-
-                const projectLink = document.createElement('a');
-                projectLink.href = 'https://websim.ai/p/' + project.id;
-                projectLink.textContent = project.title || 'Untitled Project';
-
-                const description = document.createElement('p');
-                description.className = 'project-description';
-                description.textContent = project.description || 'No description provided.';
-
-                projectItem.appendChild(projectLink);
-                projectItem.appendChild(description);
-                projectList.appendChild(projectItem);
-            });
+            await loadProjects();
         })();
     </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
