@@ -1,0 +1,85 @@
+<html><base href="/">
+<head>
+    <title>My Projects</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #343a40;
+        }
+        .project-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .project-item {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .project-item a {
+            text-decoration: none;
+            color: #007bff;
+            font-size: 1.5em;
+        }
+        .project-item a:hover {
+            text-decoration: underline;
+        }
+        .project-description {
+            margin-top: 10px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <h1>My Projects</h1>
+    <div id="project-list" class="project-list">
+        <!-- Projects will be loaded here -->
+    </div>
+
+    <script>
+        (async () => {
+            const user = await window.websim.getUser();
+            const projectList = document.getElementById('project-list');
+
+            if (!user) {
+                projectList.innerHTML = '<p>You need to be logged in to view your projects.</p>';
+                return;
+            }
+
+            const response = await fetch('/api/v1/user/projects');
+            const data = await response.json();
+
+            const projects = data.projects.data;
+
+            if (projects.length === 0) {
+                projectList.innerHTML = '<p>You have no projects yet. Start creating to see them here!</p>';
+                return;
+            }
+
+            projects.forEach(({ project }) => {
+                const projectItem = document.createElement('div');
+                projectItem.className = 'project-item';
+
+                const projectLink = document.createElement('a');
+                projectLink.href = 'https://websim.ai/p/' + project.id;
+                projectLink.textContent = project.title || 'Untitled Project';
+
+                const description = document.createElement('p');
+                description.className = 'project-description';
+                description.textContent = project.description || 'No description provided.';
+
+                projectItem.appendChild(projectLink);
+                projectItem.appendChild(description);
+                projectList.appendChild(projectItem);
+            });
+        })();
+    </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
