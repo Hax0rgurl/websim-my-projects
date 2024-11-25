@@ -1,135 +1,370 @@
-<html><base href="/">
+<html>
 <head>
+    <base href="/">
     <title>My Projects</title>
     <style>
+        /* Dark Mode with Neon theme */
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
+            background-color: #121212;
+            color: #e0e0e0;
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        h1 {
-            color: #343a40;
+        .header {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 20px;
+            background-color: #1e1e1e;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header button, .header select {
+            background-color: #212121;
+            color: #00ffea;
+            border: 1px solid #00ffea;
+            border-radius: 5px;
+            padding: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-right: 10px;
+        }
+        .header button:hover, .header select:hover {
+            background-color: #00ffea;
+            color: #212121;
+        }
+        #stats {
+            padding: 10px 20px;
+            font-size: 1.1em;
+            color: #00ffea;
+        }
+        .container {
+            padding: 20px;
         }
         .project-list {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
         }
-        .project-item {
-            background-color: #ffffff;
+        .project {
+            background-color: #1e1e1e;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s;
         }
-        .project-item a {
+        .project:hover {
+            transform: scale(1.05);
+        }
+        .project h3 {
+            color: #00ffea;
+            margin-top: 10px;
+        }
+        .project p, .project h4 {
+            color: #e0e0e0;
+        }
+        .project a {
+            color: #00ffea;
             text-decoration: none;
-            color: #007bff;
-            font-size: 1.5em;
+            word-break: break-all;
         }
-        .project-item a:hover {
+        .project a:hover {
             text-decoration: underline;
         }
-        .project-description {
-            margin-top: 10px;
-            color: #6c757d;
-        }
-        .load-more {
-            margin-top: 20px;
-            text-align: center;
-        }
-        .load-more button {
-            padding: 10px 20px;
-            font-size: 1em;
-            background-color: #007bff;
-            border: none;
-            color: #ffffff;
+        .project img {
+            width: 100%;
+            height: auto;
             border-radius: 5px;
-            cursor: pointer;
+            margin-bottom: 10px;
         }
-        .load-more button:hover {
-            background-color: #0056b3;
+        .remix {
+            background-color: #212121;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .api-section {
+            padding: 20px;
+            background-color: #1e1e1e;
+            border-top: 1px solid #00ffea;
+        }
+        .api-section h2 {
+            color: #00ffea;
+        }
+        .api-list {
+            list-style: none;
+            padding: 0;
+        }
+        .api-list li {
+            margin-bottom: 10px;
+            color: #e0e0e0;
+        }
+        .api-list li span {
+            color: #00ffea;
+        }
+        /* Neon effect */
+        .neon-text {
+            color: #00ffea;
+            text-shadow:
+                0 0 5px #00ffea,
+                0 0 10px #00ffea,
+                0 0 20px #00ffea,
+                0 0 40px #00ffea,
+                0 0 80px #00ffea;
         }
     </style>
 </head>
 <body>
-    <h1>My Projects</h1>
-    <div id="project-list" class="project-list">
-        <!-- Projects will be loaded here -->
+    <div class="header">
+        <button id="updateButton">Update Projects</button>
+        <button id="previewButton">Preview as Background</button>
+        <select id="column-select">
+            <option value="1">1 Column</option>
+            <option value="2">2 Columns</option>
+            <option value="3">3 Columns</option>
+            <option value="4" selected>4 Columns</option>
+            <option value="5">5 Columns</option>
+            <option value="6">6 Columns</option>
+            <option value="7">7 Columns</option>
+            <option value="8">8 Columns</option>
+        </select>
     </div>
-    <div id="load-more-container" class="load-more">
-        <!-- Load More button will be inserted here if needed -->
+    <div id="stats"></div>
+    <div class="container">
+        <div class="output" id="output">
+            <div id="projects" class="project-list"></div>
+        </div>
     </div>
-
+    <div class="api-section">
+        <h2 class="neon-text">Available Endpoints</h2>
+        <ul class="api-list"></ul>
+    </div>
     <script>
-        (async () => {
-            const user = await window.websim.getUser();
-            const projectList = document.getElementById('project-list');
-            const loadMoreContainer = document.getElementById('load-more-container');
+        window.addEventListener('load', () => {
+            document.getElementById('updateButton').addEventListener('click', fetchUserProjects);
+            document.getElementById('column-select').addEventListener('change', function() {
+                const columns = this.value;
+                document.querySelector('.project-list').style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+            });
+            document.getElementById('previewButton').addEventListener('click', function() {
+                const projects = document.querySelectorAll('.project');
+                projects.forEach(project => {
+                    const siteId = project.getAttribute('data-site-id');
+                    if (siteId) {
+                        const imageUrl = `https://images.websim.ai/v1/site/${siteId}/600`;
+                        project.style.backgroundImage = `url('${imageUrl}')`;
+                        project.style.backgroundSize = 'cover';
+                        project.style.backgroundPosition = 'center';
+                    }
+                });
+            });
+            fetchUserProjects();
+            populateApiEndpoints();
+        });
 
-            if (!user) {
-                projectList.innerHTML = '<p>You need to be logged in to view your projects.</p>';
-                return;
-            }
-
-            let endCursor = null;
-            let loading = false;
-            async function loadProjects() {
-                if (loading) return;
-                loading = true;
-
-                let url = '/api/v1/user/projects';
-                let params = [];
-                if (endCursor) {
-                    params.push('after=' + encodeURIComponent(endCursor));
-                }
-                params.push('first=10'); // Adjust the number to control how many projects to load per request
-                if (params.length) {
-                    url += '?' + params.join('&');
-                }
-
-                const response = await fetch(url);
-                const data = await response.json();
-
-                const projects = data.projects.data;
-
-                if (projects.length === 0 && !endCursor) {
-                    projectList.innerHTML = '<p>You have no projects yet. Start creating to see them here!</p>';
-                    loadMoreContainer.innerHTML = '';
+        async function fetchUserProjects() {
+            try {
+                const user = await window.websim.getUser();
+                if (!user || !user.username) {
+                    alert('You need to be logged in to view your projects.');
                     return;
                 }
+                let projectsData = [];
+                let hasNextPage = true;
+                let after = null;
+                while (hasNextPage) {
+                    const params = new URLSearchParams();
+                    params.append('first', '100');
+                    if (after) params.append('after', after);
+                    const response = await fetch(`/api/v1/users/${user.username}/projects?` + params.toString());
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    const data = await response.json();
+                    projectsData = projectsData.concat(data.projects.data.map(item => ({
+                        project: item.project,
+                        project_revision: item.project_revision,
+                        site: item.site
+                    })));
+                    hasNextPage = data.projects.meta.has_next_page;
+                    after = data.projects.meta.end_cursor;
+                }
+                analyzeProjects(projectsData);
+            } catch (error) {
+                alert('Error fetching project data: ' + error.message);
+            }
+        }
 
-                projects.forEach(({ project }) => {
-                    const projectItem = document.createElement('div');
-                    projectItem.className = 'project-item';
+        async function analyzeProjects(projectsData) {
+            const projectsContainer = document.getElementById('projects');
+            projectsContainer.innerHTML = '';
+            const statsContainer = document.getElementById('stats');
+            statsContainer.innerHTML = '';
 
-                    const projectLink = document.createElement('a');
-                    projectLink.href = 'https://websim.ai/p/' + project.id;
-                    projectLink.textContent = project.title || 'Untitled Project';
+            const totalProjects = projectsData.length;
+            let totalViews = 0;
+            let totalLikes = 0;
+            const visibilityCounts = {
+                listed: 0,
+                unlisted: 0
+            };
 
-                    const description = document.createElement('p');
-                    description.className = 'project-description';
-                    description.textContent = project.description || 'No description provided.';
-
-                    projectItem.appendChild(projectLink);
-                    projectItem.appendChild(description);
-                    projectList.appendChild(projectItem);
-                });
-
-                const hasNextPage = data.projects.meta.has_next_page;
-                endCursor = data.projects.meta.end_cursor;
-                loading = false;
-
-                if (hasNextPage) {
-                    loadMoreContainer.innerHTML = '<button id="load-more-button">Load More</button>';
-                    document.getElementById('load-more-button').addEventListener('click', loadProjects);
-                } else {
-                    loadMoreContainer.innerHTML = '';
+            const uniqueProjects = [];
+            const projectIds = new Set();
+            for (const item of projectsData) {
+                if (!projectIds.has(item.project.id)) {
+                    projectIds.add(item.project.id);
+                    uniqueProjects.push(item);
                 }
             }
 
-            await loadProjects();
-        })();
+            for (const { project } of uniqueProjects) {
+                totalViews += project.stats.views || 0;
+                totalLikes += project.stats.likes || 0;
+                if (project.visibility === 'public') {
+                    visibilityCounts.listed = (visibilityCounts.listed || 0) + 1;
+                } else {
+                    visibilityCounts.unlisted = (visibilityCounts.unlisted || 0) + 1;
+                }
+            }
+
+            statsContainer.innerHTML = `<strong>Total:</strong> ${totalProjects} &nbsp; <strong>Views:</strong> ${totalViews} &nbsp; <strong>Likes:</strong> ${totalLikes} &nbsp; <strong>Vis:</strong> Listed (${visibilityCounts.listed || 0}), Unlisted (${visibilityCounts.unlisted || 0})`;
+
+            uniqueProjects.sort((a, b) => new Date(b.project.updated_at) - new Date(a.project.updated_at));
+            let projectNumber = 1;
+            for (const item of uniqueProjects) {
+                const { project, site } = item;
+
+                let remixes = [];
+                try {
+                    let remixHasNextPage = true;
+                    let remixAfter = null;
+                    while (remixHasNextPage) {
+                        const remixParams = new URLSearchParams();
+                        remixParams.append('first', '100');
+                        if (remixAfter) remixParams.append('after', remixAfter);
+                        const descendantsResponse = await fetch(`/api/v1/projects/${project.id}/descendants?` + remixParams.toString());
+                        if (descendantsResponse.ok) {
+                            const descendantsData = await descendantsData.json();
+                            remixes = remixes.concat(descendantsData.projects.data);
+                            remixHasNextPage = descendantsData.projects.meta.has_next_page;
+                            remixAfter = descendantsData.projects.meta.end_cursor;
+                        } else {
+                            remixHasNextPage = false;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching descendants:', error);
+                }
+
+                const projectDiv = document.createElement('div');
+                projectDiv.className = 'project';
+                if (site && site.id) {
+                    projectDiv.setAttribute('data-site-id', site.id);
+                }
+
+                if (site && site.id) {
+                    const imageUrl = `https://images.websim.ai/v1/site/${site.id}/600`;
+                    const imgElement = document.createElement('img');
+                    imgElement.src = imageUrl;
+                    imgElement.alt = project.title || 'Project Screenshot';
+                    imgElement.width = 600;
+                    imgElement.height = 400;
+                    projectDiv.appendChild(imgElement);
+                }
+
+                const projectName = document.createElement('h3');
+                projectName.textContent = `${projectNumber}. ${project.title || 'Unnamed Project'}`;
+                projectNumber++;
+
+                const projectInfo = document.createElement('p');
+                const updDate = project.updated_at ? new Date(project.updated_at).toLocaleDateString() : 'Unknown';
+                const views = project.stats.views || 0;
+                const likes = project.stats.likes || 0;
+                let visibility = '';
+                if (project.visibility === 'public') {
+                    visibility = 'Listed';
+                } else {
+                    visibility = 'Unlisted';
+                }
+                const runs = views; // Assuming runs are equal to views
+
+                projectInfo.innerHTML = `<strong>Upd:</strong> ${updDate} &nbsp; <strong>Vis:</strong> ${visibility} &nbsp; <strong>V:</strong> ${views} &nbsp; <strong>L:</strong> ${likes} &nbsp; <strong>R:</strong> ${runs}`;
+
+                const projectLink = document.createElement('p');
+                const projectPageUrl = `https://websim.ai/p/${project.id}`;
+                projectLink.innerHTML = `<a href="${projectPageUrl}" target="_blank">${projectPageUrl}</a>`;
+
+                projectDiv.appendChild(projectName);
+                projectDiv.appendChild(projectInfo);
+                projectDiv.appendChild(projectLink);
+
+                if (remixes.length > 0) {
+                    const remixesHeader = document.createElement('h4');
+                    remixesHeader.textContent = 'Remixes:';
+                    projectDiv.appendChild(remixesHeader);
+
+                    remixes.forEach(remixItem => {
+                        const remixDiv = document.createElement('div');
+                        remixDiv.className = 'remix';
+
+                        const remixProject = remixItem.project;
+                        const remixUser = remixProject.created_by;
+                        const remixProjectLinkUrl = `https://websim.ai/p/${remixProject.id}`;
+
+                        const remixInfo = document.createElement('p');
+                        remixInfo.innerHTML = `<strong>User:</strong> ${remixUser.username || 'Unknown User'} &nbsp; <strong>ID:</strong> ${remixUser.id}`;
+
+                        const remixProjectLink = document.createElement('p');
+                        remixProjectLink.innerHTML = `<a href="${remixProjectLinkUrl}" target="_blank">${remixProjectLinkUrl}</a>`;
+
+                        remixDiv.appendChild(remixInfo);
+                        remixDiv.appendChild(remixProjectLink);
+
+                        projectDiv.appendChild(remixDiv);
+                    });
+                }
+
+                projectsContainer.appendChild(projectDiv);
+            }
+        }
+
+        function populateApiEndpoints() {
+            const apiList = document.querySelector('.api-list');
+            const endpoints = [
+                { method: 'GET', url: '/api/v1/feed/multiplayer', description: 'Get multiplayer content feed' },
+                { method: 'GET', url: '/api/v1/feed/trending', description: 'Get trending content feed' },
+                { method: 'GET', url: '/api/v1/users/{usernameOrId}/feed', description: 'Get a user\'s content feed' },
+                { method: 'POST', url: '/api/v1/auth/login', description: 'User authentication' },
+                { method: 'POST', url: '/api/v1/auth/logout', description: 'User logout' },
+                { method: 'GET', url: '/api/v1/users', description: 'Retrieve list of all users' },
+                { method: 'POST', url: '/api/v1/users', description: 'Create a new user' },
+                { method: 'GET', url: '/api/v1/users/{usernameOrId}', description: 'Get user details' },
+                { method: 'PUT', url: '/api/v1/users/{usernameOrId}', description: 'Update user details' },
+                { method: 'DELETE', url: '/api/v1/users/{usernameOrId}', description: 'Delete a user' },
+                { method: 'POST', url: '/api/transform/html', description: 'Transform HTML or generate images' },
+                { method: 'GET', url: '/api/v1/projects/{project_id}', description: 'Get project details' },
+                { method: 'GET', url: '/api/v1/projects/{project_id}/revisions', description: 'Get project revisions' },
+                { method: 'GET', url: '/api/v1/sites/{site_id}', description: 'Get site details' },
+                { method: 'GET', url: '/api/v1/feed/search/{searchQuery}', description: 'Search content' },
+                { method: 'POST', url: '/api/ai_completion', description: 'Generate AI completions' },
+                { method: 'GET', url: '/api/v1/users/{usernameOrId}/followers', description: 'Get user followers' },
+                { method: 'GET', url: '/api/v1/users/{usernameOrId}/following', description: 'Get users being followed' },
+                { method: 'POST', url: '/api/v1/users/{usernameOrId}/follow', description: 'Follow a user' },
+                { method: 'DELETE', url: '/api/v1/users/{usernameOrId}/follow', description: 'Unfollow a user' },
+                { method: 'GET', url: '/api/v1/users/{usernameOrId}/likes', description: 'Get user likes' }
+            ];
+            endpoints.forEach(endpoint => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${endpoint.method}</span> ${endpoint.url} - ${endpoint.description}`;
+                apiList.appendChild(li);
+            });
+        }
     </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
