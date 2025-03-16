@@ -22,8 +22,7 @@
             top: 0;
             z-index: 100;
         }
-        /* Updated button styles to apply to all buttons */
-        button, select {
+        .header button, .header select {
             background-color: #212121;
             color: #00ffea;
             border: 1px solid #00ffea;
@@ -33,7 +32,7 @@
             font-size: 1em;
             margin-right: 10px;
         }
-        button:hover, select:hover {
+        .header button:hover, .header select:hover {
             background-color: #00ffea;
             color: #212121;
         }
@@ -41,23 +40,6 @@
             padding: 10px 20px;
             font-size: 1.1em;
             color: #00ffea;
-            display: flex;
-            align-items: center;
-            padding: 20px;
-        }
-        #stats button {
-            background-color: #212121;
-            color: #00ffea;
-            border: 1px solid #00ffea;
-            border-radius: 5px;
-            padding: 10px;
-            cursor: pointer;
-            font-size: 1em;
-            margin-right: 10px;
-        }
-        #stats button:hover {
-            background-color: #00ffea;
-            color: #212121;
         }
         .container {
             padding: 20px;
@@ -181,6 +163,13 @@
                     }
                 });
             });
+
+            // Attach fetchUserProjects function to button that says "PROJECTS"
+            const projectsButton = Array.from(document.querySelectorAll('button')).find(button => button.textContent.trim() === 'PROJECTS');
+            if (projectsButton) {
+                projectsButton.addEventListener('click', fetchUserProjects);
+            }
+
             fetchUserProjects();
             populateApiEndpoints();
         });
@@ -251,12 +240,7 @@
                 }
             }
 
-            statsContainer.innerHTML = `
-                <button><strong>Total:</strong> ${totalProjects}</button>
-                <button><strong>Views:</strong> ${totalViews}</button>
-                <button><strong>Likes:</strong> ${totalLikes}</button>
-                <button><strong>Vis:</strong> Listed (${visibilityCounts.listed || 0}), Unlisted (${visibilityCounts.unlisted || 0})</button>
-            `;
+            statsContainer.innerHTML = `<strong>Total:</strong> ${totalProjects} &nbsp; <strong>Views:</strong> ${totalViews} &nbsp; <strong>Likes:</strong> ${totalLikes} &nbsp; <strong>Vis:</strong> Listed (${visibilityCounts.listed || 0}), Unlisted (${visibilityCounts.unlisted || 0})`;
 
             uniqueProjects.sort((a, b) => new Date(b.project.updated_at) - new Date(a.project.updated_at));
             let projectNumber = 1;
