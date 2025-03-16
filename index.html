@@ -31,10 +31,20 @@
             cursor: pointer;
             font-size: 1em;
             margin-right: 10px;
+            /* Add neon glow effect */
+            box-shadow:
+                0 0 5px #00ffea,
+                0 0 10px #00ffea,
+                0 0 20px #00ffea,
+                0 0 40px #00ffea,
+                0 0 80px #00ffea;
+            transition: background-color 0.3s, color 0.3s, box-shadow 0.3s;
         }
         .header button:hover, .header select:hover {
             background-color: #00ffea;
             color: #212121;
+            /* Remove neon glow on hover */
+            box-shadow: none;
         }
         #stats {
             padding: 10px 20px;
@@ -250,7 +260,7 @@
                         if (remixAfter) remixParams.append('after', remixAfter);
                         const descendantsResponse = await fetch(`/api/v1/projects/${project.id}/descendants?` + remixParams.toString());
                         if (descendantsResponse.ok) {
-                            const descendantsData = await descendantsData.json();
+                            const descendantsData = await descendantsResponse.json();
                             remixes = remixes.concat(descendantsData.projects.data);
                             remixHasNextPage = descendantsData.projects.meta.has_next_page;
                             remixAfter = descendantsData.projects.meta.end_cursor;
