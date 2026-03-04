@@ -321,11 +321,16 @@
                         remixDiv.className = 'remix';
 
                         const remixProject = remixItem.project;
+                        if (!remixProject) return;
+
                         const remixUser = remixProject.created_by;
                         const remixProjectLinkUrl = `https://websim.ai/p/${remixProject.id}`;
 
                         const remixInfo = document.createElement('p');
-                        remixInfo.innerHTML = `<strong>User:</strong> ${remixUser.username || 'Unknown User'} &nbsp; <strong>ID:</strong> ${remixUser.id}`;
+                        const username = remixUser ? (remixUser.username || 'Unknown User') : 'Unknown User';
+                        const userId = remixUser ? remixUser.id : 'N/A';
+
+                        remixInfo.innerHTML = `<strong>User:</strong> ${username} &nbsp; <strong>ID:</strong> ${userId}`;
 
                         const remixProjectLink = document.createElement('p');
                         remixProjectLink.innerHTML = `<a href="${remixProjectLinkUrl}" target="_blank">${remixProjectLinkUrl}</a>`;
