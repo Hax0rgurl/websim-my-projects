@@ -32,6 +32,63 @@
             font-size: 1em;
             margin-right: 10px;
         }
+        /* Modal styles */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 200; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.8); 
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background-color: #1e1e1e;
+            margin: 5% auto; 
+            padding: 30px; 
+            border: 1px solid #00ffea;
+            width: 80%; 
+            max-width: 900px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 234, 0.2);
+            color: #e0e0e0;
+            position: relative;
+        }
+        .close {
+            color: #00ffea;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            transition: color 0.2s;
+        }
+        .close:hover,
+        .close:focus {
+            color: #fff;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        pre {
+            background-color: #0a0a0a;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border: 1px solid #333;
+            color: #aaddff;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+        code {
+            font-family: inherit;
+        }
+        .comment { color: #6a9955; }
+        .keyword { color: #c586c0; }
+        .string { color: #ce9178; }
+        .function { color: #dcdcaa; }
         .header button:hover, .header select:hover {
             background-color: #00ffea;
             color: #212121;
@@ -122,6 +179,7 @@
 <body>
     <div class="header">
         <button id="updateButton">Update Projects</button>
+        <button id="devGuideButton">🤖 Bot Guide</button>
         <span id="loading" style="display:none; color: #00ffea; margin-right: 10px;">Loading...</span>
         <button id="previewButton">Preview as Background</button>
         <select id="column-select">
@@ -145,8 +203,78 @@
         <h2 class="neon-text">Available Endpoints</h2>
         <ul class="api-list"></ul>
     </div>
+
+    <!-- Explanation Modal -->
+    <div id="devModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 class="neon-text">🤖 Bot/Developer Guide: Fetching Projects</h2>
+            <p>If you are a bot or a developer trying to fetch a user's projects programmatically, follow this pattern. The API uses cursor-based pagination.</p>
+            
+            <h3>The Algorithm</h3>
+            <pre><code id="codeExample">
+<span class="keyword">async</span> <span class="keyword">function</span> <span class="function">fetchAllUserProjects</span>(username) {
+    <span class="keyword">let</span> allProjects = [];
+    <span class="keyword">let</span> hasNextPage = <span class="keyword">true</span>;
+    <span class="keyword">let</span> afterCursor = <span class="keyword">null</span>;
+
+    <span class="keyword">while</span> (hasNextPage) {
+        <span class="comment">// 1. Construct URL parameters</span>
+        <span class="keyword">const</span> params = <span class="keyword">new</span> URLSearchParams();
+        params.append(<span class="string">'first'</span>, <span class="string">'100'</span>); <span class="comment">// Maximize page size</span>
+        <span class="keyword">if</span> (afterCursor) {
+            params.append(<span class="string">'after'</span>, afterCursor);
+        }
+
+        <span class="comment">// 2. Fetch the data</span>
+        <span class="keyword">const</span> response = <span class="keyword">await</span> fetch(<span class="string">`/api/v1/users/${username}/projects?`</span> + params.toString());
+        <span class="keyword">const</span> data = <span class="keyword">await</span> response.json();
+
+        <span class="comment">// 3. Process the page</span>
+        <span class="keyword">if</span> (data?.projects?.data) {
+            <span class="comment">// 'data.projects.data' contains the array of project items</span>
+            allProjects = allProjects.concat(data.projects.data);
+            
+            <span class="comment">// 4. Update cursor for next iteration</span>
+            hasNextPage = data.projects.meta.has_next_page;
+            afterCursor = data.projects.meta.end_cursor;
+        } <span class="keyword">else</span> {
+            hasNextPage = <span class="keyword">false</span>;
+        }
+    }
+    
+    <span class="keyword">return</span> allProjects;
+}
+            </code></pre>
+            
+            <h3>Data Structure Note</h3>
+            <p>Each item in the returned array contains:</p>
+            <ul>
+                <li><code>project</code>: { id, title, updated_at, stats: { views, likes }, visibility }</li>
+                <li><code>site</code>: { id } (Used for constructing thumbnail URLs: <code>https://images.websim.ai/v1/site/{site_id}/600</code>)</li>
+            </ul>
+        </div>
+    </div>
+
     <script>
         window.addEventListener('load', () => {
+            // Modal Logic
+            const modal = document.getElementById("devModal");
+            const btn = document.getElementById("devGuideButton");
+            const span = document.getElementsByClassName("close")[0];
+
+            btn.onclick = function() {
+                modal.style.display = "block";
+            }
+            span.onclick = function() {
+                modal.style.display = "none";
+            }
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+
             document.getElementById('updateButton').addEventListener('click', fetchUserProjects);
             document.getElementById('column-select').addEventListener('change', function() {
                 const columns = this.value;
