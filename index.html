@@ -122,6 +122,7 @@
 <body>
     <div class="header">
         <button id="updateButton">Update Projects</button>
+        <span id="loading" style="display:none; color: #00ffea; margin-right: 10px;">Loading...</span>
         <button id="previewButton">Preview as Background</button>
         <select id="column-select">
             <option value="1">1 Column</option>
@@ -175,6 +176,9 @@
         });
 
         async function fetchUserProjects() {
+            const loadingIndicator = document.getElementById('loading');
+            if (loadingIndicator) loadingIndicator.style.display = 'inline-block';
+
             try {
                 const user = await window.websim.getUser();
                 if (!user || !user.username) {
@@ -188,22 +192,31 @@
                     const params = new URLSearchParams();
                     params.append('first', '100');
                     if (after) params.append('after', after);
+                    
                     const response = await fetch(`/api/v1/users/${user.username}/projects?` + params.toString());
                     if (!response.ok) {
                         throw new Error('Network response was not ok');
                     }
                     const data = await response.json();
-                    projectsData = projectsData.concat(data.projects.data.map(item => ({
-                        project: item.project,
-                        project_revision: item.project_revision,
-                        site: item.site
-                    })));
-                    hasNextPage = data.projects.meta.has_next_page;
-                    after = data.projects.meta.end_cursor;
+                    
+                    if (data && data.projects && Array.isArray(data.projects.data)) {
+                        projectsData = projectsData.concat(data.projects.data.map(item => ({
+                            project: item.project,
+                            project_revision: item.project_revision,
+                            site: item.site
+                        })));
+                        hasNextPage = data.projects.meta.has_next_page;
+                        after = data.projects.meta.end_cursor;
+                    } else {
+                        hasNextPage = false;
+                    }
                 }
                 analyzeProjects(projectsData);
             } catch (error) {
+                console.error("Error fetching project data:", error);
                 alert('Error fetching project data: ' + error.message);
+            } finally {
+                if (loadingIndicator) loadingIndicator.style.display = 'none';
             }
         }
 
@@ -213,7 +226,23 @@
             const statsContainer = document.getElementById('stats');
             statsContainer.innerHTML = '';
 
-            const totalProjects = projectsData.length;
+            // Safety check for projectsData
+            if (!Array.isArray(projectsData)) {
+                console.error("projectsData is not an array");
+                return;
+            }
+
+            const uniqueProjects = [];
+            const projectIds = new Set();
+            for (const item of projectsData) {
+                // Ensure item and project exist before accessing properties
+                if (item && item.project && !projectIds.has(item.project.id)) {
+                    projectIds.add(item.project.id);
+                    uniqueProjects.push(item);
+                }
+            }
+
+            const totalProjects = uniqueProjects.length;
             let totalViews = 0;
             let totalLikes = 0;
             const visibilityCounts = {
@@ -221,18 +250,11 @@
                 unlisted: 0
             };
 
-            const uniqueProjects = [];
-            const projectIds = new Set();
-            for (const item of projectsData) {
-                if (!projectIds.has(item.project.id)) {
-                    projectIds.add(item.project.id);
-                    uniqueProjects.push(item);
-                }
-            }
-
             for (const { project } of uniqueProjects) {
-                totalViews += project.stats.views || 0;
-                totalLikes += project.stats.likes || 0;
+                // Safely access stats with default object
+                const stats = project.stats || {};
+                totalViews += stats.views || 0;
+                totalLikes += stats.likes || 0;
                 if (project.visibility === 'public') {
                     visibilityCounts.listed = (visibilityCounts.listed || 0) + 1;
                 } else {
@@ -244,30 +266,10 @@
 
             uniqueProjects.sort((a, b) => new Date(b.project.updated_at) - new Date(a.project.updated_at));
             let projectNumber = 1;
+
             for (const item of uniqueProjects) {
                 const { project, site } = item;
-
-                let remixes = [];
-                try {
-                    let remixHasNextPage = true;
-                    let remixAfter = null;
-                    while (remixHasNextPage) {
-                        const remixParams = new URLSearchParams();
-                        remixParams.append('first', '100');
-                        if (remixAfter) remixParams.append('after', remixAfter);
-                        const descendantsResponse = await fetch(`/api/v1/projects/${project.id}/descendants?` + remixParams.toString());
-                        if (descendantsResponse.ok) {
-                            const descendantsData = await descendantsResponse.json();
-                            remixes = remixes.concat(descendantsData.projects.data);
-                            remixHasNextPage = descendantsData.projects.meta.has_next_page;
-                            remixAfter = descendantsData.projects.meta.end_cursor;
-                        } else {
-                            remixHasNextPage = false;
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error fetching descendants:', error);
-                }
+                const stats = project.stats || {};
 
                 const projectDiv = document.createElement('div');
                 projectDiv.className = 'project';
@@ -291,15 +293,15 @@
 
                 const projectInfo = document.createElement('p');
                 const updDate = project.updated_at ? new Date(project.updated_at).toLocaleDateString() : 'Unknown';
-                const views = project.stats.views || 0;
-                const likes = project.stats.likes || 0;
+                const views = stats.views || 0;
+                const likes = stats.likes || 0;
                 let visibility = '';
                 if (project.visibility === 'public') {
                     visibility = 'Listed';
                 } else {
                     visibility = 'Unlisted';
                 }
-                const runs = views; // Assuming runs are equal to views
+                const runs = views;
 
                 projectInfo.innerHTML = `<strong>Upd:</strong> ${updDate} &nbsp; <strong>Vis:</strong> ${visibility} &nbsp; <strong>V:</strong> ${views} &nbsp; <strong>L:</strong> ${likes} &nbsp; <strong>R:</strong> ${runs}`;
 
@@ -310,37 +312,6 @@
                 projectDiv.appendChild(projectName);
                 projectDiv.appendChild(projectInfo);
                 projectDiv.appendChild(projectLink);
-
-                if (remixes.length > 0) {
-                    const remixesHeader = document.createElement('h4');
-                    remixesHeader.textContent = 'Remixes:';
-                    projectDiv.appendChild(remixesHeader);
-
-                    remixes.forEach(remixItem => {
-                        const remixDiv = document.createElement('div');
-                        remixDiv.className = 'remix';
-
-                        const remixProject = remixItem.project;
-                        if (!remixProject) return;
-
-                        const remixUser = remixProject.created_by;
-                        const remixProjectLinkUrl = `https://websim.ai/p/${remixProject.id}`;
-
-                        const remixInfo = document.createElement('p');
-                        const username = remixUser ? (remixUser.username || 'Unknown User') : 'Unknown User';
-                        const userId = remixUser ? remixUser.id : 'N/A';
-
-                        remixInfo.innerHTML = `<strong>User:</strong> ${username} &nbsp; <strong>ID:</strong> ${userId}`;
-
-                        const remixProjectLink = document.createElement('p');
-                        remixProjectLink.innerHTML = `<a href="${remixProjectLinkUrl}" target="_blank">${remixProjectLinkUrl}</a>`;
-
-                        remixDiv.appendChild(remixInfo);
-                        remixDiv.appendChild(remixProjectLink);
-
-                        projectDiv.appendChild(remixDiv);
-                    });
-                }
 
                 projectsContainer.appendChild(projectDiv);
             }
